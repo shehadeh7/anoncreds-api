@@ -3,7 +3,7 @@
 ## Setup
 ```
 docker build -t anoncreds-api .
-docker run anoncreds-api -p 8000:8000
+ docker run -p 8000:8000 anoncreds-api
 ```
 
 ## Usage
