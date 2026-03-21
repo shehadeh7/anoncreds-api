@@ -171,6 +171,7 @@ class AnonCredsV2:
                             encryption.get("domain")
                         ),
                         "encryption_key": encryption.get("encryptionKey"),
+                        "allow_message_decryption": False,
                     }
                     statements.append(
                         {

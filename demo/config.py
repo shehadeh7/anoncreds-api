@@ -19,8 +19,8 @@ class Config(object):
     ENDPOINT = f"http://{DOMAIN}" if DOMAIN == "localhost:5000" else f"https://{DOMAIN}"
 
     ASKAR_DB = os.getenv("ASKAR_DB", "sqlite://session/app.db")
-    ANONCREDS_API = "https://api.anoncreds.vc"
-    # ANONCREDS_API = "http://dev.opsec.id:8000"
+    # ANONCREDS_API = "https://api.anoncreds.vc"
+    ANONCREDS_API = "http://localhost:8000"
 
     SESSION_TYPE = "cachelib"
     SESSION_SERIALIZATION_FORMAT = "json"
