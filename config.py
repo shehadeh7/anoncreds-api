@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "unsecured")
 
-    DOMAIN: str = os.getenv("DOMAIN", "api.anoncreds.vc")
+    DOMAIN: str = os.getenv("DOMAIN", "localhost:8000")
     ASKAR_DB: str = os.getenv("ASKAR_DB", "sqlite://app.db")
 
     BBS_BLINDER: str = (

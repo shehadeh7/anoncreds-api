@@ -149,6 +149,11 @@ class CreatePresentationRequest(BaseModel):
     # options: CreatePresentationOption = Field()
     challenge: str = Field(None)
     presSchemaId: str = Field()
+    
+class UpdateRevocationHandleRequest(BaseModel):
+    """UpdateRevocationHandleRequest model."""
+
+    verificationMethod: str = Field(settings.TEST_VALUES["verification_method"])
 
 
 class CredentialsIssueOptions(BaseModel):
@@ -191,3 +196,8 @@ class IssuerDecryptProofRequest(BaseModel):
     """IssuerDecryptProofRequest model."""
 
     proof: dict = Field()
+    
+class IssuerRevokeRequest(BaseModel):
+    """IssuerRevokeRequest model."""
+    
+    claims: List[str] = Field()

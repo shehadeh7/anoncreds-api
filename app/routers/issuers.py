@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from app.plugins import AskarStorage, AnonCredsV2
 from app.models.web_requests import (
+    IssuerRevokeRequest,
     SetupIssuerRequest,
     IssueCredentialRequest,
     IssuerDecryptProofRequest
@@ -40,7 +41,7 @@ async def clear_issuer_did_document(issuer_id: str):
             {
                 "type": "AnonCredsAPI",
                 "id": f"{did}#anoncreds-api",
-                "serviceEndpoint": "https://api.anoncreds.vc",
+                "serviceEndpoint": "http://localhost:8000",
             }
         ],
     }
@@ -70,7 +71,7 @@ async def new_credential_definition(
                 {
                     "type": "AnonCredsAPI",
                     "id": f"{did}#anoncreds-api",
-                    "serviceEndpoint": "https://api.anoncreds.vc",
+                    "serviceEndpoint": "http://localhost:8000",
                 }
             ],
         }
@@ -151,6 +152,8 @@ async def issue_credential(request_body: IssueCredentialRequest):
 
     else:
         credential = issuer.issue_credential(claims_data)
+        
+    await askar.update("secret", cred_def_id, issuer.issuer)
 
     cred_def["issuer_did"] = issuer_did
     # credential = issuer.cred_to_w3c(cred_def, credential)
@@ -187,3 +190,28 @@ async def resolve_issuer_did(issuer_id: str = "demo"):
     if not did_document:
         raise HTTPException(status_code=404, detail="No issuer found.")
     return JSONResponse(status_code=200, content=did_document)
+
+
+@router.post("/issuers/{issuer_id}/credentials/{cred_def_id}/revoke", tags=["Issuers"])
+async def revoke_credentials(issuer_id: str, cred_def_id: str, request_body: IssuerRevokeRequest):
+    """
+    Revoke a list of credentials by their revocation claims.
+    """
+    request_body = request_body.model_dump()
+    
+    claims = request_body.get("claims")
+    issuer_priv = await askar.fetch("secret", cred_def_id)
+    if not issuer_priv:
+        raise HTTPException(status_code=404, detail="Issuer secret not found.")
+
+    anoncreds = AnonCredsV2(issuer=issuer_priv)
+    
+    try:
+        revoked = anoncreds.revoke_credentials(claims)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    # Save updated issuer state (accumulator + active set) back to Askar
+    await askar.update("secret", cred_def_id, anoncreds.issuer)
+    
+    return JSONResponse(status_code=200, content={"revoked": revoked})

@@ -7,7 +7,7 @@ use rand::thread_rng;
 use indexmap::IndexMap;
 // use ::credx::indexmap::IndexMap
 use ::credx::blind::{BlindCredentialBundle, BlindCredentialRequest};
-use ::credx::claim::{Claim, ClaimData, HashedClaim};
+use ::credx::claim::{Claim, ClaimData, HashedClaim, RevocationClaim};
 use ::credx::{
     create_domain_proof_generator, generate_verifiable_encryption_keys
 };
@@ -61,6 +61,29 @@ fn issue_credential(issuer_private: String, claims_data: String) -> String {
     let claims_data: Vec<ClaimData> = serde_json::from_str(&claims_data).unwrap();
     let credential = issuer_private.sign_credential(&claims_data).unwrap();
     format!("{}", serde_json::to_string(&credential).unwrap())
+}
+
+#[pyfunction]
+fn revoke_credentials(issuer_private: String, claims: String) -> String {
+    let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
+    let claims_vec: Vec<RevocationClaim> = serde_json::from_str(&claims).unwrap();
+    println!("Inside revoke received claims: {:?}", claims);
+    println!("Inside revoke, claimns_vec is {:?}", claims_vec);
+    println!("ACTIVE: {:?}", issuer_private.revocation_registry.active);
+    println!("ELEMENTS: {:?}", issuer_private.revocation_registry.elements);
+    let revoked_credentials = issuer_private.revoke_credentials(&claims_vec).unwrap();
+
+    format!("{}", serde_json::to_string(&revoked_credentials).unwrap())
+}
+
+#[pyfunction]
+fn update_revocation_handle(issuer_private: String, claim: String) -> String {
+    let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
+    let claim: RevocationClaim = serde_json::from_str(&claim).unwrap();
+
+    let new_witness = issuer_private.update_revocation_handle(claim).unwrap();
+
+    format!("{}", serde_json::to_string(&new_witness).unwrap())
 }
 
 #[pyfunction]
@@ -208,6 +231,9 @@ fn anoncreds_api(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // m.add_function(wrap_pyfunction!(check_domain_commitment, m)?)?;
     m.add_function(wrap_pyfunction!(reveal_blind_credential, m)?)?;
     m.add_function(wrap_pyfunction!(create_key_scalar, m)?)?;
+
+    m.add_function(wrap_pyfunction!(revoke_credentials, m)?)?;
+    m.add_function(wrap_pyfunction!(update_revocation_handle, m)?)?;
 
     Ok(())
 }
