@@ -1,0 +1,53 @@
+{% extends('layouts/base.wizard.jinja') %}
+{% block page %}
+<div class="card card-md">
+    <div class="card-body text-center py-4 p-sm-5">
+        <h1 class="mt-5">AnonCreds v2</h1>
+        <p class="text-secondary">Revoke Credential</p>
+    </div>
+    <div class="hr-text hr-text-center hr-text-spaceless">Revocation Action</div>
+    <div class="card-body">
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">Target</div>
+                    <div class="text-secondary">Credential 1 (Alice) &mdash; revocation id <code>rev-1</code></div>
+                </div>
+            </div>
+        </a>
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">Accumulator Updated</div>
+                    <div class="text-secondary">The revocation registry accumulator is recomputed to exclude rev-1.</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="hr-text hr-text-center hr-text-spaceless">Post-Revocation Verification (Stale Witnesses)</div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col">
+                <span class="badge bg-danger-lt">Invalid</span>
+                <span class="font-weight-medium ms-2">Credential 1 (Alice)</span>
+                <div class="text-secondary">Revoked &mdash; proof fails against the new accumulator.</div>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col">
+                <span class="badge bg-danger-lt">Invalid</span>
+                <span class="font-weight-medium ms-2">Credential 2 (Bob)</span>
+                <div class="text-secondary">Not revoked, but witness is stale &mdash; proof fails until witness is updated.</div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-3 align-items-center mt-3">
+        <div class="col">
+            <div class="btn-list justify-content-end">
+                <a href="{{ url_for('wizard.present') }}" class="btn btn-link link-secondary btn-2"> Previous </a>
+                <a href="{{ url_for('wizard.witness_update') }}" class="btn btn-primary btn-2"> Next </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

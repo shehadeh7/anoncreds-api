@@ -1,0 +1,53 @@
+{% extends('layouts/base.wizard.jinja') %}
+{% block page %}
+<div class="card card-md">
+    <div class="card-body text-center py-4 p-sm-5">
+        <h1 class="mt-5">AnonCreds v2</h1>
+        <p class="text-secondary">Update Witness</p>
+    </div>
+    <div class="hr-text hr-text-center hr-text-spaceless">Witness Update</div>
+    <div class="card-body">
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">Target</div>
+                    <div class="text-secondary">Credential 2 (Bob) &mdash; revocation id <code>rev-2</code></div>
+                </div>
+            </div>
+        </a>
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">Revocation Handle Refreshed</div>
+                    <div class="text-secondary">The holder requests a new witness from the issuer that reflects the current accumulator state.</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="hr-text hr-text-center hr-text-spaceless">Final Verification Results</div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col">
+                <span class="badge bg-success-lt">Valid</span>
+                <span class="font-weight-medium ms-2">Credential 2 (Bob)</span>
+                <div class="text-secondary">Witness updated &mdash; presentation verifies against the new accumulator.</div>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col">
+                <span class="badge bg-danger-lt">Invalid</span>
+                <span class="font-weight-medium ms-2">Credential 1 (Alice)</span>
+                <div class="text-secondary">Revoked &mdash; remains permanently invalid regardless of witness updates.</div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-3 align-items-center mt-3">
+        <div class="col">
+            <div class="btn-list justify-content-end">
+                <a href="{{ url_for('wizard.revoke') }}" class="btn btn-link link-secondary btn-2"> Previous </a>
+                <a href="{{ url_for('wizard.intro') }}" class="btn btn-primary btn-2"> Start Over </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

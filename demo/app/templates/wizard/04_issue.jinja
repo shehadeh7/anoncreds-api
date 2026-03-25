@@ -1,0 +1,71 @@
+{% extends('layouts/base.wizard.jinja') %}
+{% block page %}
+<div class="card card-md">
+    <div class="card-body text-center py-4 p-sm-5">
+        <h1 class="mt-5">AnonCreds v2</h1>
+        <p class="text-secondary">Issue Credentials</p>
+    </div>
+    <div class="hr-text hr-text-center hr-text-spaceless">Credential 1 &mdash; Alice</div>
+    <div class="card-body">
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">credentialId <span class="badge bg-purple-lt">Revocation</span></div>
+                    <div class="text-secondary">rev-1</div>
+                </div>
+            </div>
+        </a>
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">name <span class="badge bg-blue-lt">Hashed</span></div>
+                    <div class="text-secondary">Alice</div>
+                </div>
+            </div>
+        </a>
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">age <span class="badge bg-green-lt">Number</span></div>
+                    <div class="text-secondary">25</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="hr-text hr-text-center hr-text-spaceless">Credential 2 &mdash; Bob</div>
+    <div class="card-body">
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">credentialId <span class="badge bg-purple-lt">Revocation</span></div>
+                    <div class="text-secondary">rev-2</div>
+                </div>
+            </div>
+        </a>
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">name <span class="badge bg-blue-lt">Hashed</span></div>
+                    <div class="text-secondary">Bob</div>
+                </div>
+            </div>
+        </a>
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">age <span class="badge bg-green-lt">Number</span></div>
+                    <div class="text-secondary">30</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="row mb-3 align-items-center mt-3">
+        <div class="col">
+            <div class="btn-list justify-content-end">
+                <a href="{{ url_for('wizard.issuer') }}" class="btn btn-link link-secondary btn-2"> Previous </a>
+                <a href="{{ url_for('wizard.present') }}" class="btn btn-primary btn-2"> Next </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
