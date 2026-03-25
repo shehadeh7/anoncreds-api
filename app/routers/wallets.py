@@ -5,6 +5,7 @@ from app.models.web_requests import (
     BlindCredentialRequest,
     StoreCredentialRequest,
     CreatePresentationRequest,
+    UpdateRevocationHandleRequest,
 )
 
 router = APIRouter(tags=["Wallets"])
@@ -121,3 +122,59 @@ async def create_presentation(holder_id: str, request_body: CreatePresentationRe
     presentation = anoncreds.create_presentation(pres_req, credentials, challenge)
 
     return JSONResponse(status_code=201, content={"presentation": presentation})
+
+
+@router.post("/wallets/{holder_id}/revocation_update", tags=["Wallets"])
+async def update_revocation_handle(holder_id: str, request_body: UpdateRevocationHandleRequest):
+    '''
+    To simplify, I kept this as one request, but realistically, holder has to contact issuer
+    since update revocation handle requires the secret key of issuer
+    '''
+    cred_def_id = request_body.verificationMethod.split("#")[-1]
+    claim_value = request_body.claim  # now we match against "value"
+
+    # 1. Load wallet
+    wallet_data = await askar.fetch("wallet", holder_id)
+    if not wallet_data:
+        raise HTTPException(status_code=404, detail="No wallet found.")
+
+    # 2. Find credential to update
+    credential = next(
+        (
+            c for c in wallet_data
+            if c.get("verificationMethod", "").split("#")[-1] == cred_def_id
+            and any(
+                rev.get("value") == claim_value
+                for rev in (cl.get("Revocation") for cl in c.get("claims", []) if "Revocation" in cl)
+            )
+        ),
+        None
+    )
+    if not credential:
+        raise HTTPException(status_code=404, detail="Credential not found in wallet.")
+
+    # 3. Extract revocation claim from credential
+    rev_claim_entry = next(
+        (cl.get("Revocation") for cl in credential.get("claims", []) if cl.get("Revocation", {}).get("value") == claim_value),
+        None
+    )
+    if not rev_claim_entry:
+        raise HTTPException(status_code=400, detail="No revocation claim found in credential.")
+
+    # 4. Fetch issuer secret
+    issuer_priv = await askar.fetch("secret", cred_def_id)
+    if not issuer_priv:
+        raise HTTPException(status_code=404, detail="Issuer secret not found.")
+
+    anoncreds = AnonCredsV2(issuer=issuer_priv)
+
+    # 5. Update the revocation handle
+    new_witness = anoncreds.update_revocation_handle(rev_claim_entry)
+
+    # 6. Update wallet
+    credential["revocation_handle"] = new_witness
+    await askar.update("wallet", holder_id, wallet_data)
+    # This would be done from the issuer side
+    await askar.update("secret", cred_def_id, anoncreds.issuer)
+
+    return JSONResponse(status_code=200, content={"updatedCredential": credential})

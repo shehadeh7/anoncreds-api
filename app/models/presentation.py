@@ -11,6 +11,7 @@ class Statement(BaseModel):
 
 class Signature(BaseModel):
     # type: str =Field("Signature")
+    id: str = Field()
     disclosed: List[str] = Field([])
     verificationMethod: str = Field(
         example="zQmb5W91ceoJoRD6DaDLfrRJLkm7H78EaTHCSJkHdHW8Kyh"
@@ -18,10 +19,11 @@ class Signature(BaseModel):
 
 
 class Revocation(BaseModel):
-    # type: str =Field("Revocation")
-    # signatureIndex: int = Field(0)
-    # claimRef: Union[str, int] = Field(0)
-    accumulator: Union[str, None] = Field(None)
+    id: str = Field()
+    referenceId: str = Field()  # links to Signature.id
+    verificationKey: str = Field()
+    accumulator: str = Field()
+    claim: int = Field()  # index of revocation claim
 
 
 class Range(BaseModel):

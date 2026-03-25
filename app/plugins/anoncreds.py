@@ -308,6 +308,7 @@ class AnonCredsV2:
             issuer_pub
         ), self._sanitize_input(issuer_priv)
         issuer_pub["id"] = issuer_priv["id"] = self._generate_id(issuer_pub)
+        self.issuer = issuer_priv
 
         return issuer_pub, issuer_priv
 
@@ -447,18 +448,19 @@ class AnonCredsV2:
         return cred_bundle
 
     def issue_credential(self, claims_data):
-        response = anoncreds_api.issue_credential(
+        issuer_priv, response = anoncreds_api.issue_credential(
             json.dumps(self.issuer),
             json.dumps(claims_data),
         )
         response = self._sanitize_input(response)
+        self.issuer = self._sanitize_input(issuer_priv)
         credential = response.get("credential")
         # credential = self.cred_to_w3c(response.get('issuer'), credential)
         return credential
 
     def issue_blind_credential(self, claims_map, request_proof):
         cred_request = from_encoded_cbor(request_proof)
-        response = anoncreds_api.issue_blind_credential(
+        issuer_priv, response = anoncreds_api.issue_blind_credential(
             json.dumps(self.issuer),
             json.dumps(claims_map),
             json.dumps(cred_request),
@@ -466,17 +468,7 @@ class AnonCredsV2:
         response = self._sanitize_input(response)
         credential = response.get("credential")
         
-        # Update revocation registry
-        for claim in claims_map.values():
-            rev = claim.get("Revocation")
-            if rev:
-                rev_id = rev.get("value")
-                if "revocation_registry" not in self.issuer:
-                    self.issuer["revocation_registry"] = {"elements": [], "active": []}
-                registry = self.issuer["revocation_registry"]
-                if rev_id not in registry["elements"]:
-                    registry["elements"].append(rev_id)
-                    registry["active"].append(rev_id)        
+        self.issuer = self._sanitize_input(issuer_priv)
         
         # credential = self.cred_to_w3c(response.get('issuer'), credential)
         return credential
@@ -484,18 +476,22 @@ class AnonCredsV2:
     def revoke_credentials(self, claims):
         wrapped = [{"value": c} if isinstance(c, str) else c for c in claims]
         
-        response = anoncreds_api.revoke_credentials(
+        issuer_priv, _ = anoncreds_api.revoke_credentials(
             json.dumps(self.issuer),
             json.dumps(wrapped),
         )
-        return self._sanitize_input(response)
+        self.issuer = self._sanitize_input(issuer_priv)
+        return self._sanitize_input(issuer_priv)
     
-    def update_revocation_handle(self, cred_def, claim):
-        response = anoncreds_api.update_revocation_handle(
-            json.dumps(cred_def),
-            json.dumps(claim),
+    def update_revocation_handle(self, claim):
+        wrapped = {"value": claim} if isinstance(claim, str) else claim
+
+        issuer_priv, response = anoncreds_api.update_revocation_handle(
+            json.dumps(self.issuer),
+            json.dumps(wrapped),
         )
-        return self._sanitize_input(response)        
+        self.issuer = self._sanitize_input(issuer_priv)
+        return self._sanitize_input(response)
         
 
     def create_presentation(self, pres_req, credentials, nonce):

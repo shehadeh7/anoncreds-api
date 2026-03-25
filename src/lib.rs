@@ -56,15 +56,19 @@ fn new_cred_request(issuer_public: String, blind_claims: String) -> (String, Str
 }
 
 #[pyfunction]
-fn issue_credential(issuer_private: String, claims_data: String) -> String {
+fn issue_credential(issuer_private: String, claims_data: String) -> (String, String) {
     let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
     let claims_data: Vec<ClaimData> = serde_json::from_str(&claims_data).unwrap();
     let credential = issuer_private.sign_credential(&claims_data).unwrap();
-    format!("{}", serde_json::to_string(&credential).unwrap())
+
+    (
+        format!("{}", serde_json::to_string(&issuer_private).unwrap()),
+        format!("{}", serde_json::to_string(&credential).unwrap())
+    )
 }
 
 #[pyfunction]
-fn revoke_credentials(issuer_private: String, claims: String) -> String {
+fn revoke_credentials(issuer_private: String, claims: String) -> (String, String) {
     let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
     let claims_vec: Vec<RevocationClaim> = serde_json::from_str(&claims).unwrap();
     println!("Inside revoke received claims: {:?}", claims);
@@ -72,22 +76,30 @@ fn revoke_credentials(issuer_private: String, claims: String) -> String {
     println!("ACTIVE: {:?}", issuer_private.revocation_registry.active);
     println!("ELEMENTS: {:?}", issuer_private.revocation_registry.elements);
     let revoked_credentials = issuer_private.revoke_credentials(&claims_vec).unwrap();
+    println!("ACTIVE after revocation: {:?}", issuer_private.revocation_registry.active);
+    println!("ELEMENTS after revocation: {:?}", issuer_private.revocation_registry.elements);    
 
-    format!("{}", serde_json::to_string(&revoked_credentials).unwrap())
+    (
+        format!("{}", serde_json::to_string(&issuer_private).unwrap()),
+        format!("{}", serde_json::to_string(&revoked_credentials).unwrap())
+    )
 }
 
 #[pyfunction]
-fn update_revocation_handle(issuer_private: String, claim: String) -> String {
+fn update_revocation_handle(issuer_private: String, claim: String) -> (String, String) {
     let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
     let claim: RevocationClaim = serde_json::from_str(&claim).unwrap();
 
     let new_witness = issuer_private.update_revocation_handle(claim).unwrap();
 
-    format!("{}", serde_json::to_string(&new_witness).unwrap())
+    (
+        format!("{}", serde_json::to_string(&issuer_private).unwrap()),
+        format!("{}", serde_json::to_string(&new_witness).unwrap())
+    )
 }
 
 #[pyfunction]
-fn issue_blind_credential(issuer_private: String, claims_data: String, cred_request: String) -> String {
+fn issue_blind_credential(issuer_private: String, claims_data: String, cred_request: String) -> (String, String) {
     let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
     let cred_request: BlindCredentialRequest<BbsScheme> = serde_json::from_str(&cred_request).unwrap();
     let claims_data: BTreeMap<String, ClaimData> = serde_json::from_str(&claims_data).unwrap();
@@ -95,7 +107,11 @@ fn issue_blind_credential(issuer_private: String, claims_data: String, cred_requ
         &cred_request,
         &claims_data,
     ).unwrap();
-    format!("{}", serde_json::to_string(&blind_bundle).unwrap())
+
+    (
+        format!("{}", serde_json::to_string(&issuer_private).unwrap()),
+        format!("{}", serde_json::to_string(&blind_bundle).unwrap())
+    )
 }
 
 #[pyfunction]
@@ -110,10 +126,10 @@ fn create_presentation(credentials: String, pres_schema: String, nonce: &[u8]) -
 #[pyfunction]
 fn verify_presentation(pres_schema: String, presentation: String, nonce: &[u8]) -> String {
     let pres_schema: PresentationSchema<BbsScheme> = serde_json::from_str(&pres_schema).unwrap();
-    // let presentation: Presentation<BbsScheme> = serde_json::from_str(&presentation).unwrap();
-    // let verification = presentation.verify(&pres_schema, &nonce).unwrap();
+    let presentation: Presentation<BbsScheme> = serde_json::from_str(&presentation).unwrap();
+    let verification = presentation.verify(&pres_schema, &nonce).unwrap();
 
-    format!("{}", serde_json::to_string(&pres_schema).unwrap())
+    format!("{}", serde_json::to_string(&verification).unwrap())
 }
 
 #[pyfunction]

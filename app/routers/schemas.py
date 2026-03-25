@@ -45,20 +45,50 @@ async def new_presentation_schema(request_body: NewPresSchema):
     request_body = request_body.model_dump()
 
     queries = request_body.get("query")
-    challenge = request_body.get("challenge")
+    statements = []
 
     for query in queries:
+
         if query.get("type") == "SignatureQuery":
-            verification_method_id = query.pop("verificationMethod").split("#")[-1]
-            query["issuer"] = await askar.fetch(
-                "credentialDefinition", verification_method_id
-            )
-            if not query.get("issuer"):
+            ref_id = query.get("referenceId")
+            verification_method = query.get("verificationMethod")
+            cred_def_id = verification_method.split("#")[-1]
+
+            cred_def = await askar.fetch("credentialDefinition", cred_def_id)
+            if not cred_def:
                 raise HTTPException(status_code=404, detail="No issuer found.")
 
-    pres_schema = anoncreds.create_pres_schema(
-        anoncreds.map_pres_schema(queries, challenge)
-    )
+            # Signature statement
+            statements.append({
+                "Signature": {
+                    "id": ref_id,
+                    "issuer": cred_def,
+                    "disclosed": query.get("disclosed", [])
+                }
+            })
+
+            # Revocation statement (if supported)
+            if cred_def.get("revocation_registry"):
+                statements.append({
+                    "Revocation": {
+                        "id": query.get("revRefId") or f"{ref_id}_rev",
+                        "reference_id": ref_id,
+                        "accumulator": cred_def.get("revocation_registry"),
+                        "verification_key": cred_def.get("revocation_verifying_key"),
+                        "claim": 0
+                    }
+                })
+
+        elif query.get("type") == "EqualityQuery":
+            statements.append({
+                "Equality": {
+                    "id": query.get("referenceId"),
+                    "claims": query.get("claims")
+                }
+            })
+            
+    pres_schema = anoncreds.create_pres_schema(statements)
+
     pres_schema_id = pres_schema.get("id")
 
     if not await askar.fetch("presentationSchema", pres_schema_id):

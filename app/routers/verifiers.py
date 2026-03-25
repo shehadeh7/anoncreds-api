@@ -18,6 +18,22 @@ async def verify_presentation(request_body: VerifyPresentationRequest):
     presentation = request_body.get("presentation")
     options = request_body.get("options")
     pres_schema = await askar.fetch("presentationSchema", options.get("presSchemaId"))
+    
+    for stmt_id, stmt in pres_schema.get("statements", {}).items():
+        if stmt.get("Revocation"):
+            cred_def_id = stmt["Revocation"]["verification_key"].get("id").split("#")[-1]
+
+            # fetch latest issuer state
+            issuer_priv = await askar.fetch("secret", cred_def_id)
+
+            if not issuer_priv:
+                raise HTTPException(status_code=404, detail="Missing issuer state")
+
+            # rebuild anoncreds with latest accumulator
+            anoncreds_latest = AnonCredsV2(issuer=issuer_priv)
+
+            stmt["Revocation"]["accumulator"] = anoncreds_latest.issuer.get("revocation_registry")    
+    
     verification = anoncreds.verify_presentation(
         pres_schema, presentation, options.get("challenge")
     )

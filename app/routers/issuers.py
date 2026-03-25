@@ -5,7 +5,7 @@ from app.models.web_requests import (
     IssuerRevokeRequest,
     SetupIssuerRequest,
     IssueCredentialRequest,
-    IssuerDecryptProofRequest
+    IssuerDecryptProofRequest,
 )
 from config import settings
 from app.utils import public_key_multibase
@@ -140,20 +140,19 @@ async def issue_credential(request_body: IssueCredentialRequest):
     if not cred_def or not issuer:
         raise HTTPException(status_code=404, detail="No issuer.")
 
-    issuer = AnonCredsV2(issuer=issuer)
-    claims_data = issuer.map_claims(cred_def, cred_subject, cred_id)
+    claims_data = anoncreds.map_claims(cred_def, cred_subject, cred_id)
     if request_proof:
         claim_indices = cred_def["schema"].get("claim_indices")
         claim_indices.remove("linkSecret")
         claims_map = {}
         for idx, claim in enumerate(claims_data):
             claims_map[claim_indices[idx]] = claim
-        credential = issuer.issue_blind_credential(claims_map, request_proof)
+        credential = anoncreds.issue_blind_credential(claims_map, request_proof)
 
     else:
-        credential = issuer.issue_credential(claims_data)
+        credential = anoncreds.issue_credential(claims_data)
         
-    await askar.update("secret", cred_def_id, issuer.issuer)
+    await askar.update("secret", cred_def_id, anoncreds.issuer)
 
     cred_def["issuer_did"] = issuer_did
     # credential = issuer.cred_to_w3c(cred_def, credential)
@@ -203,8 +202,6 @@ async def revoke_credentials(issuer_id: str, cred_def_id: str, request_body: Iss
     issuer_priv = await askar.fetch("secret", cred_def_id)
     if not issuer_priv:
         raise HTTPException(status_code=404, detail="Issuer secret not found.")
-
-    anoncreds = AnonCredsV2(issuer=issuer_priv)
     
     try:
         revoked = anoncreds.revoke_credentials(claims)
