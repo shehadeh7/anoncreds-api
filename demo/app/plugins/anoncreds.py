@@ -196,7 +196,7 @@ class AnonCredsApi:
         self, issuer_label, cred_subject, verification_method, request_proof
     ):
         r = requests.post(
-            f"{self.endpoint}/issuers/{issuer_label}/credentials/{verification_method.split("#")[-1]}/issue",
+            f"{self.endpoint}/issuers/{issuer_label}/credentials/{verification_method.split('#')[-1]}/issue",
             json={
                 "credentialSubject": cred_subject,
                 "options": {
@@ -249,7 +249,7 @@ class AnonCredsApi:
 
     def decrypt_proof_issuer(self, proof, issuer_label, verification_method):
         r = requests.post(
-            f"{self.endpoint}/issuers/{issuer_label}/credentials/{verification_method.split("#")[-1]}/decrypt",
+            f"{self.endpoint}/issuers/{issuer_label}/credentials/{verification_method.split('#')[-1]}/decrypt",
             json={"proof": proof},
         )
         return r.json()

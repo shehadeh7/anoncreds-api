@@ -1,0 +1,61 @@
+{% extends('layouts/base.wizard.jinja') %}
+{% block page %}
+<div class="card card-md">
+    <div class="card-body text-center py-4 p-sm-5">
+        <h1 class="mt-5">AnonCreds v2</h1>
+        <p class="text-secondary">Present &amp; Verify</p>
+    </div>
+    <div class="hr-text hr-text-center hr-text-spaceless">Presentation Schema</div>
+    <div class="card-body">
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">Signature Statement</div>
+                    <div class="text-secondary">Proves the credential was signed by the issuer without revealing hidden claims.</div>
+                </div>
+            </div>
+        </a>
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">Revocation Statement</div>
+                    <div class="text-secondary">Proves the credential has not been revoked against the accumulator.</div>
+                </div>
+            </div>
+        </a>
+        <a class="card-link" href="#">
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="font-weight-medium">Nonce</div>
+                    <div class="text-secondary">32-byte challenge to bind the presentation to this session.</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="hr-text hr-text-center hr-text-spaceless">Verification Results</div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col">
+                <span class="badge bg-success-lt">Valid</span>
+                <span class="font-weight-medium ms-2">Credential 1 (Alice)</span>
+                <div class="text-secondary">Presentation created and verified successfully.</div>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col">
+                <span class="badge bg-success-lt">Valid</span>
+                <span class="font-weight-medium ms-2">Credential 2 (Bob)</span>
+                <div class="text-secondary">Presentation created and verified successfully.</div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-3 align-items-center mt-3">
+        <div class="col">
+            <div class="btn-list justify-content-end">
+                <a href="{{ url_for('wizard.issue') }}" class="btn btn-link link-secondary btn-2"> Previous </a>
+                <a href="{{ url_for('wizard.revoke') }}" class="btn btn-primary btn-2"> Next </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

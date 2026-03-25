@@ -65,6 +65,9 @@ def issuer():
 # @bp.route("/issuer_json")
 # def issuer_json():
 #     return render_template("issuer_json.jinja")
+@bp.route("/issue")
+def issue():
+    return render_template("wizard/04_issue.jinja")
 
 # @bp.route("/credential")
 # def credential():
@@ -78,14 +81,26 @@ def issuer():
 #         pass
 #     return render_template("statements.jinja")
 
+@bp.route("/present")
+def present():
+    return render_template("wizard/05_present.jinja")
+
 # @bp.route("/presentation_request")
 # def presentation_request():
 #     if request.method == "POST":
 #         pass
 #     return render_template("presentation_request.jinja")
 
+@bp.route("/revoke")
+def revoke():
+    return render_template("wizard/06_revoke.jinja")
+
 # @bp.route("/presentation")
 # def presentation():
 #     if request.method == "POST":
 #         pass
 #     return render_template("presentation.jinja")
+
+@bp.route("/witness-update")
+def witness_update():
+    return render_template("wizard/07_witness_update.jinja")
