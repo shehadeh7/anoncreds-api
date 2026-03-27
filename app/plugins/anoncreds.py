@@ -1,3 +1,5 @@
+import secrets
+
 import anoncreds_api
 import json
 import uuid
@@ -54,10 +56,11 @@ class AnonCredsV2:
     # def encode_nonce(self, nonce):
     #     return Array('uint8', nonce).data.hex
 
-    # def create_nonce(self):
-    #     nonce = anoncreds_api.create_nonce()
-    #     nonce = self._sanitize_input(nonce)
-    #     return self.encode_nonce(nonce)
+    def create_nonce(self):
+        return secrets.token_bytes(32).hex()  # 32 random bytes as hex string
+
+    def decode_nonce(self, nonce: str) -> bytes:
+        return bytes.fromhex(nonce)  # back to 32 bytes for Rust
 
     def create_scalar(self, value):
         scalar = (
@@ -448,19 +451,20 @@ class AnonCredsV2:
         return cred_bundle
 
     def issue_credential(self, claims_data):
-        issuer_priv, response = anoncreds_api.issue_credential(
+        issuer_priv, issuer_pub, response = anoncreds_api.issue_credential(
             json.dumps(self.issuer),
             json.dumps(claims_data),
         )
         response = self._sanitize_input(response)
         self.issuer = self._sanitize_input(issuer_priv)
         credential = response.get("credential")
+        issuer_pub = self._sanitize_input(issuer_pub)
         # credential = self.cred_to_w3c(response.get('issuer'), credential)
-        return credential
+        return credential, issuer_pub
 
     def issue_blind_credential(self, claims_map, request_proof):
         cred_request = from_encoded_cbor(request_proof)
-        issuer_priv, response = anoncreds_api.issue_blind_credential(
+        issuer_priv, issuer_pub, response = anoncreds_api.issue_blind_credential(
             json.dumps(self.issuer),
             json.dumps(claims_map),
             json.dumps(cred_request),
@@ -469,29 +473,32 @@ class AnonCredsV2:
         credential = response.get("credential")
         
         self.issuer = self._sanitize_input(issuer_priv)
+        issuer_pub = self._sanitize_input(issuer_pub)
         
         # credential = self.cred_to_w3c(response.get('issuer'), credential)
-        return credential
+        return credential, issuer_pub
     
     def revoke_credentials(self, claims):
         wrapped = [{"value": c} if isinstance(c, str) else c for c in claims]
         
-        issuer_priv, _ = anoncreds_api.revoke_credentials(
+        issuer_priv, issuer_pub, _ = anoncreds_api.revoke_credentials(
             json.dumps(self.issuer),
             json.dumps(wrapped),
         )
         self.issuer = self._sanitize_input(issuer_priv)
-        return self._sanitize_input(issuer_priv)
+        issuer_pub = self._sanitize_input(issuer_pub)
+        return self._sanitize_input(issuer_priv), issuer_pub
     
     def update_revocation_handle(self, claim):
         wrapped = {"value": claim} if isinstance(claim, str) else claim
 
-        issuer_priv, response = anoncreds_api.update_revocation_handle(
+        issuer_priv, issuer_pub, response = anoncreds_api.update_revocation_handle(
             json.dumps(self.issuer),
             json.dumps(wrapped),
         )
         self.issuer = self._sanitize_input(issuer_priv)
-        return self._sanitize_input(response)
+        issuer_pub = self._sanitize_input(issuer_pub)
+        return self._sanitize_input(response), issuer_pub
         
 
     def create_presentation(self, pres_req, credentials, nonce):

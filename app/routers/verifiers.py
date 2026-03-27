@@ -14,35 +14,38 @@ anoncreds = AnonCredsV2()
 @router.post("/verifiers/presentations/verify")
 async def verify_presentation(request_body: VerifyPresentationRequest):
     request_body = request_body.model_dump()
-
     presentation = request_body.get("presentation")
     options = request_body.get("options")
+
     pres_schema = await askar.fetch("presentationSchema", options.get("presSchemaId"))
-    
+    if not pres_schema:
+        raise HTTPException(status_code=404, detail="No presentation schema found.")
+
+    cred_def_id_map = {}
+
     for stmt_id, stmt in pres_schema.get("statements", {}).items():
+        if stmt.get("Signature"):
+            sig = stmt["Signature"]
+            cred_def_id = sig["issuer"]["id"].split("#")[-1]
+            cred_def_id_map[sig["id"]] = cred_def_id
+
+            live_cred_def = await askar.fetch("credentialDefinition", cred_def_id)
+            if not live_cred_def:
+                raise HTTPException(status_code=404, detail=f"Missing cred def for {cred_def_id}")
+            sig["issuer"] = live_cred_def
+
         if stmt.get("Revocation"):
-            cred_def_id = stmt["Revocation"]["verification_key"].get("id").split("#")[-1]
+            rev = stmt["Revocation"]
+            cred_def_id = cred_def_id_map.get(rev["reference_id"])
 
-            # fetch latest issuer state
-            issuer_priv = await askar.fetch("secret", cred_def_id)
+            live_cred_def = await askar.fetch("credentialDefinition", cred_def_id)
+            if not live_cred_def:
+                raise HTTPException(status_code=404, detail=f"Missing cred def for {cred_def_id}")
+            rev["accumulator"] = live_cred_def.get("revocation_registry")
+            rev["verification_key"] = live_cred_def.get("revocation_verifying_key")
 
-            if not issuer_priv:
-                raise HTTPException(status_code=404, detail="Missing issuer state")
-
-            # rebuild anoncreds with latest accumulator
-            anoncreds_latest = AnonCredsV2(issuer=issuer_priv)
-
-            stmt["Revocation"]["accumulator"] = anoncreds_latest.issuer.get("revocation_registry")    
-    
-    verification = anoncreds.verify_presentation(
-        pres_schema, presentation, options.get("challenge")
-    )
-    return JSONResponse(
-        status_code=200,
-        content={
-            "verification": verification,
-        },
-    )
+    verification = anoncreds.verify_presentation(pres_schema, presentation, options.get("challenge"))
+    return JSONResponse(status_code=200, content={"verification": verification})
 
 @router.post("/verifiers/keys")
 async def create_encryption_keypair():

@@ -147,12 +147,13 @@ async def issue_credential(request_body: IssueCredentialRequest):
         claims_map = {}
         for idx, claim in enumerate(claims_data):
             claims_map[claim_indices[idx]] = claim
-        credential = anoncreds.issue_blind_credential(claims_map, request_proof)
+        credential, issuer_pub = anoncreds.issue_blind_credential(claims_map, request_proof)
 
     else:
-        credential = anoncreds.issue_credential(claims_data)
+        credential, issuer_pub = anoncreds.issue_credential(claims_data)
         
     await askar.update("secret", cred_def_id, anoncreds.issuer)
+    await askar.update("credentialDefinition", cred_def_id, issuer_pub)
 
     cred_def["issuer_did"] = issuer_did
     # credential = issuer.cred_to_w3c(cred_def, credential)
@@ -204,11 +205,12 @@ async def revoke_credentials(issuer_id: str, cred_def_id: str, request_body: Iss
         raise HTTPException(status_code=404, detail="Issuer secret not found.")
     
     try:
-        revoked = anoncreds.revoke_credentials(claims)
+        revoked, issuer_pub = anoncreds.revoke_credentials(claims)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
     # Save updated issuer state (accumulator + active set) back to Askar
     await askar.update("secret", cred_def_id, anoncreds.issuer)
+    await askar.update("credentialDefinition", cred_def_id, issuer_pub)
     
     return JSONResponse(status_code=200, content={"revoked": revoked})

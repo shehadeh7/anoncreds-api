@@ -103,24 +103,42 @@ async def create_presentation(holder_id: str, request_body: CreatePresentationRe
         raise HTTPException(status_code=404, detail="No wallet found.")
 
     pres_req = await askar.fetch("presentationSchema", pres_schema_id)
+    
+    print("pres_req is ", pres_req)
+
     credentials = {}
+    cred_def_id_map = {}
+
     for statement_id, statement in pres_req.get("statements").items():
         if statement.get("Signature"):
+            sig = statement["Signature"]
+            cred_def_id = sig["issuer"]["id"].split("#")[-1]
+            cred_def_id_map[sig["id"]] = cred_def_id
+
+            live_cred_def = await askar.fetch("credentialDefinition", cred_def_id)
+            if not live_cred_def:
+                raise HTTPException(status_code=404, detail=f"No cred def for {cred_def_id}")
+            sig["issuer"] = live_cred_def
+
             cred_match = next(
-                (
-                    cred
-                    for cred in wallet
-                    if cred.get("verificationMethod")
-                    == statement.get("Signature").get("issuer").get("id")
-                ),
+                (cred for cred in wallet if cred_def_id in cred.get("verificationMethod", "")),
                 None,
             )
-            credentials[statement.get("Signature").get("id")] = {
-                "Signature": cred_match
-            }
+            if not cred_match:
+                raise HTTPException(status_code=404, detail=f"No credential found for {cred_def_id}")
+
+            credentials[sig["id"]] = {"Signature": cred_match}
+
+        if statement.get("Revocation"):
+            rev = statement["Revocation"]
+            cred_def_id = cred_def_id_map.get(rev["reference_id"])
+
+            live_cred_def = await askar.fetch("credentialDefinition", cred_def_id)
+            # Both are plain hex strings — just update in place
+            rev["accumulator"] = live_cred_def.get("revocation_registry")
+            rev["verification_key"] = live_cred_def.get("revocation_verifying_key")
 
     presentation = anoncreds.create_presentation(pres_req, credentials, challenge)
-
     return JSONResponse(status_code=201, content={"presentation": presentation})
 
 
@@ -169,12 +187,13 @@ async def update_revocation_handle(holder_id: str, request_body: UpdateRevocatio
     anoncreds = AnonCredsV2(issuer=issuer_priv)
 
     # 5. Update the revocation handle
-    new_witness = anoncreds.update_revocation_handle(rev_claim_entry)
+    new_witness, issuer_pub = anoncreds.update_revocation_handle(rev_claim_entry)
 
     # 6. Update wallet
     credential["revocation_handle"] = new_witness
     await askar.update("wallet", holder_id, wallet_data)
     # This would be done from the issuer side
     await askar.update("secret", cred_def_id, anoncreds.issuer)
+    await askar.update("credentialDefinition", cred_def_id, issuer_pub)
 
     return JSONResponse(status_code=200, content={"updatedCredential": credential})

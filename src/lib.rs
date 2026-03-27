@@ -56,19 +56,21 @@ fn new_cred_request(issuer_public: String, blind_claims: String) -> (String, Str
 }
 
 #[pyfunction]
-fn issue_credential(issuer_private: String, claims_data: String) -> (String, String) {
+fn issue_credential(issuer_private: String, claims_data: String) -> (String, String, String) {
     let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
     let claims_data: Vec<ClaimData> = serde_json::from_str(&claims_data).unwrap();
     let credential = issuer_private.sign_credential(&claims_data).unwrap();
+    let issuer_public: IssuerPublic<BbsScheme> = IssuerPublic::from(&issuer_private);
 
     (
         format!("{}", serde_json::to_string(&issuer_private).unwrap()),
+        format!("{}", serde_json::to_string(&issuer_public).unwrap()),
         format!("{}", serde_json::to_string(&credential).unwrap())
     )
 }
 
 #[pyfunction]
-fn revoke_credentials(issuer_private: String, claims: String) -> (String, String) {
+fn revoke_credentials(issuer_private: String, claims: String) -> (String, String, String) {
     let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
     let claims_vec: Vec<RevocationClaim> = serde_json::from_str(&claims).unwrap();
     println!("Inside revoke received claims: {:?}", claims);
@@ -78,28 +80,31 @@ fn revoke_credentials(issuer_private: String, claims: String) -> (String, String
     let revoked_credentials = issuer_private.revoke_credentials(&claims_vec).unwrap();
     println!("ACTIVE after revocation: {:?}", issuer_private.revocation_registry.active);
     println!("ELEMENTS after revocation: {:?}", issuer_private.revocation_registry.elements);    
+    let issuer_public: IssuerPublic<BbsScheme> = IssuerPublic::from(&issuer_private);
 
     (
         format!("{}", serde_json::to_string(&issuer_private).unwrap()),
+        format!("{}", serde_json::to_string(&issuer_public).unwrap()),
         format!("{}", serde_json::to_string(&revoked_credentials).unwrap())
     )
 }
 
 #[pyfunction]
-fn update_revocation_handle(issuer_private: String, claim: String) -> (String, String) {
+fn update_revocation_handle(issuer_private: String, claim: String) -> (String, String, String) {
     let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
     let claim: RevocationClaim = serde_json::from_str(&claim).unwrap();
-
+    let issuer_public: IssuerPublic<BbsScheme> = IssuerPublic::from(&issuer_private);
     let new_witness = issuer_private.update_revocation_handle(claim).unwrap();
 
     (
         format!("{}", serde_json::to_string(&issuer_private).unwrap()),
+        format!("{}", serde_json::to_string(&issuer_public).unwrap()),
         format!("{}", serde_json::to_string(&new_witness).unwrap())
     )
 }
 
 #[pyfunction]
-fn issue_blind_credential(issuer_private: String, claims_data: String, cred_request: String) -> (String, String) {
+fn issue_blind_credential(issuer_private: String, claims_data: String, cred_request: String) -> (String, String, String) {
     let mut issuer_private: Issuer<BbsScheme> = serde_json::from_str(&issuer_private).unwrap();
     let cred_request: BlindCredentialRequest<BbsScheme> = serde_json::from_str(&cred_request).unwrap();
     let claims_data: BTreeMap<String, ClaimData> = serde_json::from_str(&claims_data).unwrap();
@@ -107,9 +112,11 @@ fn issue_blind_credential(issuer_private: String, claims_data: String, cred_requ
         &cred_request,
         &claims_data,
     ).unwrap();
+    let issuer_public: IssuerPublic<BbsScheme> = IssuerPublic::from(&issuer_private);
 
     (
         format!("{}", serde_json::to_string(&issuer_private).unwrap()),
+        format!("{}", serde_json::to_string(&issuer_public).unwrap()),
         format!("{}", serde_json::to_string(&blind_bundle).unwrap())
     )
 }
