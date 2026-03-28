@@ -1,0 +1,472 @@
+{% extends('layouts/base.wizard.jinja') %}
+{% block page %}
+<div style="max-width: 900px; margin: 0 auto;">
+  <div class="text-center py-4">
+    <h1 class="mt-3">AnonCreds v2</h1>
+    <p class="text-secondary">Interactive Credential Playground</p>
+  </div>
+
+  <!-- Event log -->
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3 class="card-title mb-0">Event Log</h3>
+      <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('log').innerHTML=''">Clear</button>
+    </div>
+    <div class="card-body p-2">
+      <div id="log" style="max-height:160px; overflow-y:auto; font-size:0.82rem; font-family:monospace; white-space:pre-wrap;"></div>
+      <div id="log-empty" class="text-secondary text-center py-2" style="font-size:0.85rem;">No events yet. Start by creating a credential schema.</div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- LEFT COLUMN: Setup -->
+    <div class="col-md-6 d-flex flex-column gap-3">
+
+      <!-- 1. Credential Schema -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title mb-0">Credential Schema</h3></div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Schema title</label>
+            <input type="text" id="schema-title" class="form-control form-control-sm" value="TestCred">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Description</label>
+            <input type="text" id="schema-desc" class="form-control form-control-sm" value="A test credential">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Properties <span class="text-secondary">(JSON)</span></label>
+            <textarea id="schema-props" class="form-control form-control-sm" rows="3" style="font-family:monospace; font-size:0.8rem;">{
+  "name": {"type": "string"},
+  "age": {"type": "number"}
+}</textarea>
+          </div>
+          <div class="mb-2">
+            <label class="form-check form-switch">
+              <input type="checkbox" id="schema-revocable" class="form-check-input" checked>
+              <span class="form-check-label">Revocable</span>
+            </label>
+          </div>
+          <button class="btn btn-primary btn-sm w-100" onclick="createSchema()">Create Credential Schema</button>
+          <div id="schema-result" class="mt-2" style="font-size:0.8rem;"></div>
+        </div>
+      </div>
+
+      <!-- 2. Issuer Setup -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title mb-0">Issuer</h3></div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Issuer ID</label>
+            <input type="text" id="issuer-id" class="form-control form-control-sm" value="demo-issuer">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Credential Schema</label>
+            <select id="issuer-schema" class="form-select form-select-sm"></select>
+          </div>
+          <div class="btn-list">
+            <button class="btn btn-primary btn-sm" onclick="setupIssuer()">Setup Issuer</button>
+            <button class="btn btn-outline-danger btn-sm" onclick="resetIssuer()">Reset Issuer</button>
+          </div>
+          <div id="issuer-result" class="mt-2" style="font-size:0.8rem;"></div>
+        </div>
+      </div>
+
+      <!-- 3. Presentation Schema -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title mb-0">Presentation Schema</h3></div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Verification Method</label>
+            <select id="pres-verif-method" class="form-select form-select-sm"></select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Disclosed fields <span class="text-secondary">(comma-separated, or blank for none)</span></label>
+            <input type="text" id="pres-disclosed" class="form-control form-control-sm" placeholder="e.g. name, age">
+          </div>
+          <button class="btn btn-primary btn-sm w-100" onclick="createPresSchema()">Create Presentation Schema</button>
+          <div id="pres-result" class="mt-2" style="font-size:0.8rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Holder / Verifier actions -->
+    <div class="col-md-6 d-flex flex-column gap-3">
+
+      <!-- 4. Issue Credential -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title mb-0">Issue Credential</h3></div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Holder ID</label>
+            <input type="text" id="issue-holder" class="form-control form-control-sm" value="alice">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Verification Method</label>
+            <select id="issue-verif-method" class="form-select form-select-sm"></select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Credential Subject <span class="text-secondary">(JSON)</span></label>
+            <textarea id="issue-subject" class="form-control form-control-sm" rows="2" style="font-family:monospace; font-size:0.8rem;">{"name": "Alice", "age": 25}</textarea>
+          </div>
+          <button class="btn btn-primary btn-sm w-100" onclick="issueCredential()">Issue Credential</button>
+          <div id="issue-result" class="mt-2" style="font-size:0.8rem;"></div>
+        </div>
+      </div>
+
+      <!-- 5. Verify Credential -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title mb-0">Verify Credential</h3></div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Holder ID</label>
+            <input type="text" id="verify-holder" class="form-control form-control-sm" value="alice">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Presentation Schema</label>
+            <select id="verify-pres-schema" class="form-select form-select-sm"></select>
+          </div>
+          <button class="btn btn-primary btn-sm w-100" onclick="verifyCredential()">Verify</button>
+          <div id="verify-result" class="mt-2" style="font-size:0.8rem;"></div>
+        </div>
+      </div>
+
+      <!-- 6. Revoke Credential -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title mb-0">Revoke Credential</h3></div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Issuer ID</label>
+            <input type="text" id="revoke-issuer" class="form-control form-control-sm" value="demo-issuer">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Credential to revoke</label>
+            <select id="revoke-cred" class="form-select form-select-sm"></select>
+          </div>
+          <button class="btn btn-danger btn-sm w-100" onclick="revokeCredential()">Revoke</button>
+          <div id="revoke-result" class="mt-2" style="font-size:0.8rem;"></div>
+        </div>
+      </div>
+
+      <!-- 7. Update Witness -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title mb-0">Update Revocation Witness</h3></div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Credential to update</label>
+            <select id="witness-cred" class="form-select form-select-sm"></select>
+          </div>
+          <button class="btn btn-warning btn-sm w-100" onclick="updateWitness()">Update Witness</button>
+          <div id="witness-result" class="mt-2" style="font-size:0.8rem;"></div>
+        </div>
+      </div>
+
+      <!-- Wallet management -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title mb-0">Wallet</h3></div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Holder ID</label>
+            <input type="text" id="wallet-holder" class="form-control form-control-sm" value="alice">
+          </div>
+          <div class="btn-list">
+            <button class="btn btn-sm btn-outline-primary" onclick="viewWallet()">View Wallet</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteWallet()">Delete Wallet</button>
+          </div>
+          <div id="wallet-result" class="mt-2" style="font-size:0.8rem;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .log-ok   { color: #2fb344; }
+  .log-fail { color: #d63939; }
+  .log-info { color: #206bc4; }
+  .result-ok   { color: #2fb344; }
+  .result-fail { color: #d63939; }
+</style>
+
+<script>
+const API = "/api-proxy";
+
+/* ============ State ============ */
+const schemas = [];          // { id, title }
+const verifMethods = [];     // { id, credDefId, issuerId }
+const presSchemas = [];      // { id }
+const issuedCreds = [];      // { holderId, revClaim, verifMethod, label }
+
+/* ============ Helpers ============ */
+async function api(method, path, body) {
+  const opts = { method, headers: { "Content-Type": "application/json" } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  const data = await r.json().catch(() => null);
+  return { ok: r.ok, status: r.status, data };
+}
+const post = (p, b) => api("POST", p, b);
+const get  = (p)    => api("GET", p);
+const del  = (p)    => api("DELETE", p);
+
+function log(msg, cls) {
+  document.getElementById("log-empty").style.display = "none";
+  const el = document.getElementById("log");
+  const ts = new Date().toLocaleTimeString();
+  el.innerHTML += `<span class="${cls||''}">[${ts}] ${esc(msg)}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+function esc(s) { const d=document.createElement("span"); d.textContent=s; return d.innerHTML; }
+
+function result(id, msg, ok) {
+  document.getElementById(id).innerHTML = `<span class="${ok?'result-ok':'result-fail'}">${esc(msg)}</span>`;
+}
+
+function refreshSelect(selectId, items, valueFn, labelFn) {
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = "";
+  items.forEach(item => {
+    const o = document.createElement("option");
+    o.value = valueFn(item);
+    o.textContent = labelFn(item);
+    sel.appendChild(o);
+  });
+}
+function refreshAllSelects() {
+  refreshSelect("issuer-schema", schemas, s=>s.id, s=>`${s.title} (${s.id.slice(0,16)}...)`);
+  refreshSelect("pres-verif-method", verifMethods, v=>v.id, v=>v.id);
+  refreshSelect("issue-verif-method", verifMethods, v=>v.id, v=>v.id);
+  refreshSelect("verify-pres-schema", presSchemas, p=>p.id, p=>p.id);
+  refreshSelect("revoke-cred", issuedCreds, (c,i)=>String(issuedCreds.indexOf(c)), c=>`${c.holderId} — ${c.revClaim||'no rev'} (${c.label})`);
+  refreshSelect("witness-cred", issuedCreds, (c,i)=>String(issuedCreds.indexOf(c)), c=>`${c.holderId} — ${c.revClaim||'no rev'} (${c.label})`);
+}
+
+function disableBtn(btn, loading) {
+  if (loading) {
+    btn.disabled = true;
+    btn._origHTML = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>';
+  } else {
+    btn.disabled = false;
+    if (btn._origHTML) btn.innerHTML = btn._origHTML;
+  }
+}
+
+/* ============ Actions ============ */
+
+async function createSchema() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const title = document.getElementById("schema-title").value.trim();
+    const desc  = document.getElementById("schema-desc").value.trim();
+    const props = JSON.parse(document.getElementById("schema-props").value);
+    const revocable = document.getElementById("schema-revocable").checked;
+
+    const r = await post("/schemas/credentials", {
+      jsonSchema: { title, description: desc, properties: props },
+      options: { revocable }
+    });
+    if (!r.ok) throw new Error(r.data?.detail || JSON.stringify(r.data));
+    schemas.push({ id: r.data.credentialSchemaId, title });
+    refreshAllSelects();
+    log(`Schema created: ${r.data.credentialSchemaId}`, "log-ok");
+    result("schema-result", `Schema ID: ${r.data.credentialSchemaId}`, true);
+  } catch(e) { log(`Schema creation failed: ${e.message}`, "log-fail"); result("schema-result", e.message, false); }
+  disableBtn(btn, false);
+}
+
+async function setupIssuer() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const issuerId = document.getElementById("issuer-id").value.trim();
+    const schemaId = document.getElementById("issuer-schema").value;
+    if (!schemaId) throw new Error("No schema selected");
+
+    const r = await post(`/issuers/${issuerId}/credentials`, { credSchemaId: schemaId });
+    if (!r.ok) throw new Error(r.data?.detail || JSON.stringify(r.data));
+    const vm = r.data.verificationMethod.id;
+    const credDefId = r.data.credentialDefinitionId;
+    verifMethods.push({ id: vm, credDefId, issuerId });
+    refreshAllSelects();
+    log(`Issuer "${issuerId}" set up. Cred Def: ${credDefId}`, "log-ok");
+    result("issuer-result", `Verification Method: ${vm}`, true);
+  } catch(e) { log(`Issuer setup failed: ${e.message}`, "log-fail"); result("issuer-result", e.message, false); }
+  disableBtn(btn, false);
+}
+
+async function resetIssuer() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const issuerId = document.getElementById("issuer-id").value.trim();
+    await del(`/issuers/${issuerId}`);
+    log(`Issuer "${issuerId}" reset.`, "log-info");
+    result("issuer-result", "Issuer reset.", true);
+  } catch(e) { log(`Issuer reset failed: ${e.message}`, "log-fail"); result("issuer-result", e.message, false); }
+  disableBtn(btn, false);
+}
+
+async function createPresSchema() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const vm = document.getElementById("pres-verif-method").value;
+    if (!vm) throw new Error("No verification method selected");
+    const disclosedRaw = document.getElementById("pres-disclosed").value.trim();
+    const disclosed = disclosedRaw ? disclosedRaw.split(",").map(s=>s.trim()).filter(Boolean) : [];
+
+    const query = [{
+      type: "SignatureQuery",
+      referenceId: "cred",
+      revRefId: "cred_rev",
+      verificationMethod: vm,
+      disclosed
+    }];
+    const r = await post("/schemas/presentations", { query });
+    if (!r.ok) throw new Error(r.data?.detail || JSON.stringify(r.data));
+    presSchemas.push({ id: r.data.presentationSchemaId });
+    refreshAllSelects();
+    log(`Presentation schema created: ${r.data.presentationSchemaId}`, "log-ok");
+    result("pres-result", `Presentation Schema: ${r.data.presentationSchemaId}`, true);
+  } catch(e) { log(`Pres schema failed: ${e.message}`, "log-fail"); result("pres-result", e.message, false); }
+  disableBtn(btn, false);
+}
+
+async function issueCredential() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const holderId = document.getElementById("issue-holder").value.trim();
+    const vm = document.getElementById("issue-verif-method").value;
+    if (!vm) throw new Error("No verification method selected");
+    const subject = JSON.parse(document.getElementById("issue-subject").value);
+    const cdi = vm.split("#").pop();
+    const issuerId = verifMethods.find(v => v.id === vm)?.issuerId || "demo-issuer";
+
+    // Step 1: credential request
+    log(`Issuing to "${holderId}": generating credential request...`, "log-info");
+    const reqR = await post(`/wallets/${holderId}/requests`, { verificationMethod: vm });
+    if (!reqR.ok) throw new Error(`Request failed: ${reqR.data?.detail || JSON.stringify(reqR.data)}`);
+    const { requestProof } = reqR.data;
+
+    // Step 2: issuer signs
+    const issR = await post(`/issuers/${issuerId}/credentials/${cdi}/issue`, {
+      credentialSubject: subject,
+      options: { verificationMethod: vm, requestProof }
+    });
+    if (!issR.ok) throw new Error(`Issue failed: ${issR.data?.detail || JSON.stringify(issR.data)}`);
+
+    // Step 3: store in wallet
+    await post(`/wallets/${holderId}/credentials`, {
+      credential: issR.data.credential,
+      options: { verificationMethod: vm }
+    });
+
+    // Get the stored credential to extract revocation claim
+    const w = await get(`/wallets/${holderId}`);
+    const cred = w.data.credentials[w.data.credentials.length - 1];
+    let revClaim = null;
+    for (const c of (cred.claims || [])) { if (c.Revocation) { revClaim = c.Revocation.value; break; } }
+
+    const label = Object.entries(subject).map(([k,v])=>`${k}=${v}`).join(", ");
+    issuedCreds.push({ holderId, revClaim, verifMethod: vm, label });
+    refreshAllSelects();
+    log(`Credential issued to "${holderId}" (rev: ${revClaim || 'none'})`, "log-ok");
+    result("issue-result", `Issued to ${holderId}. Rev claim: ${revClaim || 'N/A'}`, true);
+  } catch(e) { log(`Issue failed: ${e.message}`, "log-fail"); result("issue-result", e.message, false); }
+  disableBtn(btn, false);
+}
+
+async function verifyCredential() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const holderId = document.getElementById("verify-holder").value.trim();
+    const presSchemaId = document.getElementById("verify-pres-schema").value;
+    if (!presSchemaId) throw new Error("No presentation schema selected");
+
+    const chR = await post("/verifiers/challenge");
+    if (!chR.ok) throw new Error("Failed to get challenge");
+    const challenge = chR.data.nonce;
+
+    log(`Creating presentation for "${holderId}"...`, "log-info");
+    const presR = await post(`/wallets/${holderId}/presentations`, { presSchemaId, challenge });
+    if (!presR.ok) throw new Error(`Presentation creation failed: ${presR.data?.detail || JSON.stringify(presR.data)}`);
+
+    const vr = await post("/verifiers/presentations/verify", {
+      presentation: presR.data.presentation,
+      options: { presSchemaId, challenge }
+    });
+    if (!vr.ok) throw new Error(`Verification request failed: ${vr.data?.detail || JSON.stringify(vr.data)}`);
+
+    if (vr.data.verification) {
+      log(`"${holderId}" verified successfully.`, "log-ok");
+      result("verify-result", "Verification: PASSED", true);
+    } else {
+      log(`"${holderId}" verification failed.`, "log-fail");
+      result("verify-result", "Verification: FAILED", false);
+    }
+  } catch(e) { log(`Verify failed: ${e.message}`, "log-fail"); result("verify-result", e.message, false); }
+  disableBtn(btn, false);
+}
+
+async function revokeCredential() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const issuerId = document.getElementById("revoke-issuer").value.trim();
+    const idx = parseInt(document.getElementById("revoke-cred").value);
+    const cred = issuedCreds[idx];
+    if (!cred) throw new Error("No credential selected");
+    if (!cred.revClaim) throw new Error("Credential has no revocation claim");
+
+    const cdi = cred.verifMethod.split("#").pop();
+    const r = await post(`/issuers/${issuerId}/credentials/${cdi}/revoke`, { claims: [cred.revClaim] });
+    if (!r.ok) throw new Error(r.data?.detail || JSON.stringify(r.data));
+
+    log(`Revoked "${cred.holderId}" credential (claim: ${cred.revClaim})`, "log-ok");
+    result("revoke-result", `Revoked: ${cred.holderId} — ${cred.revClaim}`, true);
+  } catch(e) { log(`Revoke failed: ${e.message}`, "log-fail"); result("revoke-result", e.message, false); }
+  disableBtn(btn, false);
+}
+
+async function updateWitness() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const idx = parseInt(document.getElementById("witness-cred").value);
+    const cred = issuedCreds[idx];
+    if (!cred) throw new Error("No credential selected");
+    if (!cred.revClaim) throw new Error("Credential has no revocation claim");
+
+    const r = await post(`/wallets/${cred.holderId}/revocation_update`, {
+      verificationMethod: cred.verifMethod,
+      claim: cred.revClaim
+    });
+    if (!r.ok) throw new Error(r.data?.detail || JSON.stringify(r.data));
+
+    log(`Witness updated for "${cred.holderId}" (claim: ${cred.revClaim})`, "log-ok");
+    result("witness-result", `Updated: ${cred.holderId} — ${cred.revClaim}`, true);
+  } catch(e) { log(`Witness update failed: ${e.message}`, "log-fail"); result("witness-result", e.message, false); }
+  disableBtn(btn, false);
+}
+
+async function viewWallet() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const holderId = document.getElementById("wallet-holder").value.trim();
+    const r = await get(`/wallets/${holderId}`);
+    if (!r.ok) throw new Error(r.data?.detail || JSON.stringify(r.data));
+    const count = (r.data.credentials || []).length;
+    log(`Wallet "${holderId}": ${count} credential(s)`, "log-info");
+    result("wallet-result", `${count} credential(s) stored`, true);
+  } catch(e) { log(`Wallet view failed: ${e.message}`, "log-fail"); result("wallet-result", e.message, false); }
+  disableBtn(btn, false);
+}
+
+async function deleteWallet() {
+  const btn = event.currentTarget; disableBtn(btn, true);
+  try {
+    const holderId = document.getElementById("wallet-holder").value.trim();
+    await del(`/wallets/${holderId}`);
+    log(`Wallet "${holderId}" deleted.`, "log-info");
+    result("wallet-result", "Wallet deleted.", true);
+  } catch(e) { log(`Wallet delete failed: ${e.message}`, "log-fail"); result("wallet-result", e.message, false); }
+  disableBtn(btn, false);
+}
+</script>
+{% endblock %}

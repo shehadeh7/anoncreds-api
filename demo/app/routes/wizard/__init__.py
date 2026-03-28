@@ -7,9 +7,12 @@ from flask import (
     redirect,
     jsonify,
     request,
+    Response,
 )
 import asyncio
+import requests as http_requests
 from app.plugins.askar import AskarStorage
+from config import Config
 from .forms import CreateSchema
 
 bp = Blueprint("wizard", __name__)
@@ -19,7 +22,8 @@ bp = Blueprint("wizard", __name__)
 def before_request_callback():
     if not session.get("client_id"):
         session["client_id"] = "123"
-        return redirect(url_for("wizard.intro"))
+        if request.endpoint != "wizard.e2e_demo":
+            return redirect(url_for("wizard.intro"))
 
 
 @bp.route("/intro")
@@ -104,3 +108,22 @@ def revoke():
 @bp.route("/witness-update")
 def witness_update():
     return render_template("wizard/07_witness_update.jinja")
+
+
+@bp.route("/e2e")
+def e2e_demo():
+    return render_template("wizard/e2e_demo.jinja")
+
+
+@bp.route("/api-proxy/<path:path>", methods=["GET", "POST", "DELETE"])
+def api_proxy(path):
+    """Proxy requests to the FastAPI backend to avoid CORS issues."""
+    url = f"{Config.ANONCREDS_API}/{path}"
+    headers = {"Content-Type": "application/json"}
+    if request.method == "GET":
+        r = http_requests.get(url, headers=headers)
+    elif request.method == "DELETE":
+        r = http_requests.delete(url, headers=headers)
+    else:
+        r = http_requests.post(url, data=request.get_data(), headers=headers)
+    return Response(r.content, status=r.status_code, content_type=r.headers.get("content-type", "application/json"))
