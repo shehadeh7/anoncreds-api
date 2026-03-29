@@ -2,8 +2,8 @@
 {% block page %}
 <div style="max-width: 900px; margin: 0 auto;">
   <div class="text-center py-4">
-    <h1 class="mt-3">AnonCreds v2</h1>
-    <p class="text-secondary">Interactive Credential Playground</p>
+    <h1 class="mt-3">UofT Anon Creds</h1>
+    <p class="text-secondary">U of T Student Credential Playground</p>
   </div>
 
   <!-- Event log -->
@@ -28,17 +28,20 @@
         <div class="card-body">
           <div class="mb-2">
             <label class="form-label">Schema title</label>
-            <input type="text" id="schema-title" class="form-control form-control-sm" value="TestCred">
+            <input type="text" id="schema-title" class="form-control form-control-sm" value="UofTStudentCredential">
           </div>
           <div class="mb-2">
             <label class="form-label">Description</label>
-            <input type="text" id="schema-desc" class="form-control form-control-sm" value="A test credential">
+            <input type="text" id="schema-desc" class="form-control form-control-sm" value="Anonymous credential for UofT students">
           </div>
           <div class="mb-2">
             <label class="form-label">Properties <span class="text-secondary">(JSON)</span></label>
-            <textarea id="schema-props" class="form-control form-control-sm" rows="3" style="font-family:monospace; font-size:0.8rem;">{
-  "name": {"type": "string"},
-  "age": {"type": "number"}
+            <textarea id="schema-props" class="form-control form-control-sm" rows="6" style="font-family:monospace; font-size:0.8rem;">{
+  "studentName": {"type": "string"},
+  "studentId": {"type": "number"},
+  "age": {"type": "number"},
+  "department": {"type": "string"},
+  "yearOfStudy": {"type": "number"}
 }</textarea>
           </div>
           <div class="mb-2">
@@ -58,7 +61,7 @@
         <div class="card-body">
           <div class="mb-2">
             <label class="form-label">Issuer ID</label>
-            <input type="text" id="issuer-id" class="form-control form-control-sm" value="demo-issuer">
+            <input type="text" id="issuer-id" class="form-control form-control-sm" value="university-registrar">
           </div>
           <div class="mb-2">
             <label class="form-label">Credential Schema</label>
@@ -99,7 +102,7 @@
         <div class="card-body">
           <div class="mb-2">
             <label class="form-label">Holder ID</label>
-            <input type="text" id="issue-holder" class="form-control form-control-sm" value="alice">
+            <input type="text" id="issue-holder" class="form-control form-control-sm" value="student-alice">
           </div>
           <div class="mb-2">
             <label class="form-label">Verification Method</label>
@@ -107,7 +110,13 @@
           </div>
           <div class="mb-2">
             <label class="form-label">Credential Subject <span class="text-secondary">(JSON)</span></label>
-            <textarea id="issue-subject" class="form-control form-control-sm" rows="2" style="font-family:monospace; font-size:0.8rem;">{"name": "Alice", "age": 25}</textarea>
+            <textarea id="issue-subject" class="form-control form-control-sm" rows="5" style="font-family:monospace; font-size:0.8rem;">{
+  "studentName": "Alice Smith",
+  "studentId": 1001234,
+  "age": 20,
+  "department": "Computer Science",
+  "yearOfStudy": 3
+}</textarea>
           </div>
           <button class="btn btn-primary btn-sm w-100" onclick="issueCredential()">Issue Credential</button>
           <div id="issue-result" class="mt-2" style="font-size:0.8rem;"></div>
@@ -120,7 +129,7 @@
         <div class="card-body">
           <div class="mb-2">
             <label class="form-label">Holder ID</label>
-            <input type="text" id="verify-holder" class="form-control form-control-sm" value="alice">
+            <input type="text" id="verify-holder" class="form-control form-control-sm" value="student-alice">
           </div>
           <div class="mb-2">
             <label class="form-label">Presentation Schema</label>
@@ -137,7 +146,7 @@
         <div class="card-body">
           <div class="mb-2">
             <label class="form-label">Issuer ID</label>
-            <input type="text" id="revoke-issuer" class="form-control form-control-sm" value="demo-issuer">
+            <input type="text" id="revoke-issuer" class="form-control form-control-sm" value="university-registrar">
           </div>
           <div class="mb-2">
             <label class="form-label">Credential to revoke</label>
@@ -167,7 +176,7 @@
         <div class="card-body">
           <div class="mb-2">
             <label class="form-label">Holder ID</label>
-            <input type="text" id="wallet-holder" class="form-control form-control-sm" value="alice">
+            <input type="text" id="wallet-holder" class="form-control form-control-sm" value="student-alice">
           </div>
           <div class="btn-list">
             <button class="btn btn-sm btn-outline-primary" onclick="viewWallet()">View Wallet</button>
@@ -338,7 +347,7 @@ async function issueCredential() {
     if (!vm) throw new Error("No verification method selected");
     const subject = JSON.parse(document.getElementById("issue-subject").value);
     const cdi = vm.split("#").pop();
-    const issuerId = verifMethods.find(v => v.id === vm)?.issuerId || "demo-issuer";
+    const issuerId = verifMethods.find(v => v.id === vm)?.issuerId || "university-registrar";
 
     // Step 1: credential request
     log(`Issuing to "${holderId}": generating credential request...`, "log-info");
